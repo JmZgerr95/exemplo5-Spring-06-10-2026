@@ -1,4 +1,5 @@
 package br.senac.sp.tads.dsw.exemplo5.controller;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,154 +8,154 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import br.senac.sp.tads.dsw.exemplo5.model.Departamento;
 import br.senac.sp.tads.dsw.exemplo5.model.Funcionario;
 import br.senac.sp.tads.dsw.exemplo5.repository.DepartamentoRepository;
 import br.senac.sp.tads.dsw.exemplo5.repository.FuncionarioRepository;
-import jakarta.transaction.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;//Serve para usar o post no mockMvc.perform
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status; 
-//Serve para usar o mockMvc.perform
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
 
-@SpringBootTest  //Quando o teste for rodado, ele vai subir o servidor
-@AutoConfigureMockMvc //Transforma parâmetros em uma requisição HTTP
-@Transactional //Gerencia transações de banco de dados de forma declarativa
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional 
 public class FuncionarioControllerTest {
     
-    @Autowired 
+    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired 
+    @Autowired
     private DepartamentoRepository departamentoRepository;
 
-     @Autowired 
+    @Autowired 
     private FuncionarioRepository funcionarioRepository;
 
-    @Autowired 
+    @Autowired
     private ObjectMapper objectMapper;
 
     private Departamento departamentoPadrao;
 
-    @BeforeEach //Sempre executada antes dos outros métodos
+    @BeforeEach 
     void setUp(){
-         Departamento departamento = new Departamento();
-         departamento.setNome("Departamento Padrão");
-         departamento.setOrcamento(10000.00);
-         departamentoPadrao = departamentoRepository.save(departamento);
-        }
+        Departamento departamento = new Departamento();
+        departamento.setNome("Departamento Padrão");
+        departamento.setOrcamento(10000.00);
+        departamentoPadrao = departamentoRepository.save(departamento);
+    }
 
-        @Test 
-        void deveCriarFuncionarioComSucesso() throws Exception {
-         //1 - Criar o objeto que queremos enviar
-         Funcionario funcionario = new Funcionario();
-         funcionario.setNome("João");
-         funcionario.setDataContratacao(LocalDate.now());
-         funcionario.setTrabalhoRemoto(true);
-         funcionario.setDepartamento(departamentoPadrao);
-
-         // 2 - Converter o objeto JAVA para JSON (String)
-         String json = objectMapper.writeValueAsString(funcionario);
-
-         //3 - Enviar o POST para a API
-         mockMvc.perform(
-            post("/api/funcionarios")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(json)
-        )
-
-        // 4 Checar se a resposta é o que foi criado
-        .andExpect(status().isCreated()) //201
-        .andExpect(jsonPath("$.id").exists()) //Verifica se o ID existe
-        .andExpect(jsonPath("$.nome").value("João")) // Verifica o nome
-        .andExpect(jsonPath("$.dataContratacao").value(LocalDate.now()))
-        .andExpect(jsonPath("$.trabalhoRemoto").value(true)) 
-        .andExpect(jsonPath("$.departamento_id").value(departamentoPadrao.getId()));      
-        } 
+    @Test 
+    void deveCriarFuncionarioComSucesso() throws Exception{
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(LocalDate.now());
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
         
+        String json = objectMapper.writeValueAsString(funcionario);
 
-        @Test 
-        void deveRetornarErro400AoCriarFuncionarioComDataFutura() throws Exception {
+        mockMvc.perform(post("/api/funcionarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.nome").value(funcionario.getNome()))
+                .andExpect(jsonPath("$.dataContratacao").value(funcionario.getDataContratacao().toString()))
+                .andExpect(jsonPath("$.trabalhoRemoto").value(funcionario.getTrabalhoRemoto()))
+                .andExpect(jsonPath("$.departamento.id").value(funcionario.getDepartamento().getId()));
+    }
 
-        }
+    @Test 
+    void deveRetornarErro400AoCriarFuncionarioComDataFutura() throws Exception{
+        LocalDate data = LocalDate.parse("2100-10-20");
+        
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(data);
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
+        
+        String json = objectMapper.writeValueAsString(funcionario);
 
-        @Test 
-        void deveListartodosOsFuncionarios() throws Exception{
-         Funcionario funcionario = new Funcionario();
-         funcionario.setNome("João");
-         funcionario.setDataContratacao(LocalDate.now());
-         funcionario.setTrabalhoRemoto(true);
-         funcionario.setDepartamento(departamentoPadrao);
+        mockMvc.perform(post("/api/funcionarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+    }
 
-         mockMvc.perform(get("/api/funcionarios"))
-         .andExpect(status().isOk())
-         .andExpect(jsonPath("$[0]").exists());
-        }
+    @Test 
+    void deveListarTodosOsFuncionarios() throws Exception{
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(LocalDate.now());
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
+        funcionarioRepository.save(funcionario);
 
-        @Test
-        void deveBuscarFuncionarioPorId() throws Exception{
-         Funcionario funcionario = new Funcionario();
-         funcionario.setNome("João");
-         funcionario.setDataContratacao(LocalDate.now());
-         funcionario.setTrabalhoRemoto(true);
-         funcionario.setDepartamento(departamentoPadrao);
+        mockMvc.perform(get("/api/funcionarios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").exists());
+    }
 
-         mockMvc.perform(get("/api/funcionarios/" + departamentoPadrao.getId()))
-         .andExpect(status().isOk())
-         .andExpect(jsonPath("$.id").exists()) //Verifica se o ID existe
-         .andExpect(jsonPath("$.nome").value("João")) // Verifica o nome
-         .andExpect(jsonPath("$.dataContratacao").value(LocalDate.now()))
-         .andExpect(jsonPath("$.trabalhoRemoto").value(true)) 
-         .andExpect(jsonPath("$.departamento").value(departamentoPadrao));  
-        }
+    @Test 
+    void deveBuscarFuncionarioPorId() throws Exception{
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(LocalDate.now());
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
+        Funcionario funcionarioSalvo = funcionarioRepository.save(funcionario);
 
-        @Test 
-        void deveAtualizarFuncionario() throws Exception{
-         Funcionario funcionario = new Funcionario();
-         funcionario.setNome("João");
-         funcionario.setDataContratacao(LocalDate.now());
-         funcionario.setTrabalhoRemoto(true);
-         Funcionario funcionarioSalvo = funcionarioRepository.save(funcionario);
+        mockMvc.perform(get("/api/funcionarios/" + funcionarioSalvo.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(funcionarioSalvo.getId()))
+                .andExpect(jsonPath("$.nome").value(funcionarioSalvo.getNome()))
+                .andExpect(jsonPath("$.trabalhoRemoto").value(funcionarioSalvo.getTrabalhoRemoto()))
+                .andExpect(jsonPath("$.departamento.id").value(funcionarioSalvo.getDepartamento().getId()));
+    }
 
-         funcionarioSalvo.setNome("João Michael");
+    @Test
+    void deveAtualizarFuncionario() throws Exception{
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(LocalDate.now());
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
+        Funcionario funcionarioSalvo = funcionarioRepository.save(funcionario);
 
-         String json = objectMapper.writeValueAsString(funcionarioSalvo);
+        funcionarioSalvo.setNome("Anderson Gabriel");
 
-         mockMvc.perform(
-            put("/api/funcionarios")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(json)
-        )
-         .andExpect(status().isOk()) //200
-         .andExpect(jsonPath("$.nome").value("João")) // Verifica o nome
-         .andExpect(jsonPath("$.dataContratacao").value(LocalDate.now()))
-         .andExpect(jsonPath("$.trabalhoRemoto").value(true)) 
-         .andExpect(jsonPath("$.departamento").value(departamentoPadrao));  
-        }
+        String json = objectMapper.writeValueAsString(funcionarioSalvo);
 
-        @Test 
-        void deveApagarFuncionario() throws Exception{
-         Funcionario funcionario = new Funcionario();
-         funcionario.setNome("João");
-         funcionario.setDataContratacao(LocalDate.now());
-         funcionario.setTrabalhoRemoto(true);
-         Funcionario funcionarioSalvo = funcionarioRepository.save(funcionario);
+        mockMvc.perform(put("/api/funcionarios/" + funcionarioSalvo.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Anderson Gabriel"));
+    }
 
-         mockMvc.perform(
-            delete("/api/funcionarios/" + funcionarioSalvo.getId()))
-            .andExpect(status().isNoContent());
+    @Test 
+    void deveApagarFuncionario() throws Exception{
+        Funcionario funcionario = new Funcionario();
+        funcionario.setNome("João Michael");
+        funcionario.setDataContratacao(LocalDate.now());
+        funcionario.setTrabalhoRemoto(true);
+        funcionario.setDepartamento(departamentoPadrao);
+        Funcionario funcionarioSalvo = funcionarioRepository.save(funcionario);
 
-        mockMvc.perform(
-            get("/api/funcionarios/" + funcionarioSalvo.getId()))
-            .andExpect(status().isNotFound());
-        }
+        mockMvc.perform(delete("/api/funcionarios/" + funcionarioSalvo.getId()))
+                .andExpect(status().isNoContent());
 
+        mockMvc.perform(get("/api/funcionarios/" + funcionarioSalvo.getId()))
+                .andExpect(status().isNotFound());
+    }
 }
